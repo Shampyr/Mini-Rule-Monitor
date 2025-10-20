@@ -1,0 +1,53 @@
+#ifndef MINI_RULE_MONITOR_H
+#define MINI_RULE_MONITOR_H
+
+#ifndef UNICODE
+#define UNICODE
+#endif
+
+#ifndef _UNICODE
+#define _UNICODE
+#endif
+
+#include <windows.h>
+#include <wchar.h>
+
+#define MRM_MAX_CHECKS 64
+#define MRM_MAX_NAME 128
+#define MRM_MAX_TYPE 32
+#define MRM_MAX_MESSAGE 512
+#define MRM_DEFAULT_INTERVAL_SECONDS 60U
+
+typedef enum MonitorStatusTag {
+    MONITOR_STATUS_OK = 0,
+    MONITOR_STATUS_WARN = 1,
+    MONITOR_STATUS_FAIL = 2,
+    MONITOR_STATUS_SKIP = 3
+} MonitorStatus;
+
+typedef struct MonitorCheckTag {
+    wchar_t name[MRM_MAX_NAME];
+    wchar_t type[MRM_MAX_TYPE];
+    wchar_t path[MAX_PATH];
+    wchar_t process_name[MAX_PATH];
+    double min_free_gb;
+    DWORD line_number;
+} MonitorCheck;
+
+typedef struct MonitorConfigTag {
+    DWORD interval_seconds;
+    wchar_t log_file[MAX_PATH];
+    MonitorCheck checks[MRM_MAX_CHECKS];
+    DWORD check_count;
+} MonitorConfig;
+
+typedef struct CheckResultTag {
+    wchar_t name[MRM_MAX_NAME];
+    wchar_t type[MRM_MAX_TYPE];
+    MonitorStatus status;
+    wchar_t message[MRM_MAX_MESSAGE];
+} CheckResult;
+
+const wchar_t *MonitorStatusText(MonitorStatus status);
+
+#endif

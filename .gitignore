@@ -1,0 +1,17 @@
+project_idea.md
+
+*.exe
+*.o
+*.obj
+build/
+dist/
+
+logs/
+*.log
+
+.vs/
+.vscode/
+.idea/
+
+*.tmp
+*.bak

@@ -1,0 +1,20 @@
+app:
+  interval_seconds: 60
+  log_file: "logs/monitor.log"
+
+checks:
+  - name: "Config file"
+    type: "file_exists"
+    path: "config.yaml"
+
+  - name: "System disk"
+    type: "disk"
+    path: "C:/"
+    min_free_gb: 1
+
+  - name: "Shell process"
+    type: "process"
+    name: "powershell.exe"
+
+  - name: "Memory"
+    type: "system"
