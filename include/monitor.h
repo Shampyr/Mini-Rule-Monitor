@@ -17,6 +17,7 @@
 #define MRM_MAX_TYPE 32
 #define MRM_MAX_MESSAGE 512
 #define MRM_DEFAULT_INTERVAL_SECONDS 60U
+#define MRM_DEFAULT_CONFIG_PATH L"config.yaml"
 
 typedef enum MonitorStatusTag {
     MONITOR_STATUS_OK = 0,
@@ -47,6 +48,14 @@ typedef struct CheckResultTag {
     MonitorStatus status;
     wchar_t message[MRM_MAX_MESSAGE];
 } CheckResult;
+
+typedef enum MonitorCommandTag {
+    MONITOR_COMMAND_HELP = 0,
+    MONITOR_COMMAND_VALIDATE_CONFIG,
+    MONITOR_COMMAND_LIST_CHECKS,
+    MONITOR_COMMAND_CHECK_ONCE,
+    MONITOR_COMMAND_RUN
+} MonitorCommand;
 
 const wchar_t *MonitorStatusText(MonitorStatus status);
 
