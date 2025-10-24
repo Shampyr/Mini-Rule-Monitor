@@ -10,6 +10,7 @@
 #endif
 
 #include <windows.h>
+#include <strsafe.h>
 #include <wchar.h>
 
 #define MRM_MAX_CHECKS 64
@@ -42,6 +43,11 @@ typedef struct MonitorConfigTag {
     DWORD check_count;
 } MonitorConfig;
 
+typedef struct ConfigErrorTag {
+    DWORD line_number;
+    wchar_t message[MRM_MAX_MESSAGE];
+} ConfigError;
+
 typedef struct CheckResultTag {
     wchar_t name[MRM_MAX_NAME];
     wchar_t type[MRM_MAX_TYPE];
@@ -58,5 +64,7 @@ typedef enum MonitorCommandTag {
 } MonitorCommand;
 
 const wchar_t *MonitorStatusText(MonitorStatus status);
+void MonitorConfigInit(MonitorConfig *config);
+BOOL LoadMonitorConfig(LPCWSTR path, MonitorConfig *config, ConfigError *error);
 
 #endif

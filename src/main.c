@@ -68,6 +68,8 @@ int wmain(int argc, wchar_t **argv)
 {
     MonitorCommand command = MONITOR_COMMAND_HELP;
     LPCWSTR config_path = MRM_DEFAULT_CONFIG_PATH;
+    MonitorConfig config;
+    ConfigError error;
 
     if (!ParseCommand(argc, argv, &command, &config_path)) {
         wprintf(L"Invalid command line.\n\n");
@@ -81,7 +83,22 @@ int wmain(int argc, wchar_t **argv)
     }
 
     wprintf(L"Mini Rule Monitor\n");
-    wprintf(L"Command: %d\n", (int)command);
+    SecureZeroMemory(&config, sizeof(config));
+    SecureZeroMemory(&error, sizeof(error));
+
+    if (!LoadMonitorConfig(config_path, &config, &error)) {
+        wprintf(L"Config error: %ls\n", error.message);
+        return 1;
+    }
+
+    if (command == MONITOR_COMMAND_VALIDATE_CONFIG) {
+        wprintf(L"Config OK: %ls\n", config_path);
+        wprintf(L"Interval: %lu seconds\n", config.interval_seconds);
+        wprintf(L"Log file: %ls\n", config.log_file);
+        return 0;
+    }
+
     wprintf(L"Config: %ls\n", config_path);
+    wprintf(L"This command will be implemented in the next slices.\n");
     return 0;
 }
