@@ -95,6 +95,19 @@ int wmain(int argc, wchar_t **argv)
         wprintf(L"Config OK: %ls\n", config_path);
         wprintf(L"Interval: %lu seconds\n", config.interval_seconds);
         wprintf(L"Log file: %ls\n", config.log_file);
+        wprintf(L"Checks: %lu\n", config.check_count);
+        return 0;
+    }
+
+    if (command == MONITOR_COMMAND_LIST_CHECKS) {
+        DWORD index = 0U;
+
+        for (index = 0U; index < config.check_count; ++index) {
+            wprintf(L"%lu. %ls [%ls]\n",
+                    index + 1U,
+                    config.checks[index].name,
+                    config.checks[index].type);
+        }
         return 0;
     }
 

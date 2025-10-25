@@ -67,6 +67,66 @@ static BOOL SplitKeyValue(wchar_t *line, wchar_t **key, wchar_t **value)
     return TRUE;
 }
 
+static BOOL IsEmptyString(const wchar_t *text)
+{
+    return text == NULL || text[0] == L'\0';
+}
+
+static BOOL CopyField(wchar_t *target,
+                      size_t target_count,
+                      LPCWSTR value,
+                      ConfigError *error,
+                      DWORD line_number,
+                      LPCWSTR error_message)
+{
+    HRESULT hr = StringCchCopyW(target, target_count, value);
+
+    if (FAILED(hr)) {
+        return SetError(error, line_number, error_message);
+    }
+
+    return TRUE;
+}
+
+static BOOL ParseCheckField(MonitorCheck *check,
+                            LPCWSTR key,
+                            LPCWSTR value,
+                            ConfigError *error,
+                            DWORD line_number)
+{
+    if (wcscmp(key, L"name") == 0) {
+        if (IsEmptyString(check->name)) {
+            return CopyField(check->name, MRM_MAX_NAME, value, error, line_number, L"Check name is too long.");
+        }
+
+        return CopyField(check->process_name, MAX_PATH, value, error, line_number, L"Process name is too long.");
+    }
+
+    if (wcscmp(key, L"type") == 0) {
+        return CopyField(check->type, MRM_MAX_TYPE, value, error, line_number, L"Check type is too long.");
+    }
+
+    if (wcscmp(key, L"path") == 0) {
+        return CopyField(check->path, MAX_PATH, value, error, line_number, L"Check path is too long.");
+    }
+
+    if (wcscmp(key, L"process_name") == 0) {
+        return CopyField(check->process_name, MAX_PATH, value, error, line_number, L"Process name is too long.");
+    }
+
+    if (wcscmp(key, L"min_free_gb") == 0) {
+        wchar_t *end = NULL;
+        double parsed = wcstod(value, &end);
+        if (end == value || *end != L'\0' || parsed < 0.0) {
+            return SetError(error, line_number, L"min_free_gb must be a non-negative number.");
+        }
+        check->min_free_gb = parsed;
+        return TRUE;
+    }
+
+    return TRUE;
+}
+
 void MonitorConfigInit(MonitorConfig *config)
 {
     if (config == NULL) {
@@ -85,6 +145,8 @@ BOOL LoadMonitorConfig(LPCWSTR path, MonitorConfig *config, ConfigError *error)
     wchar_t line[CONFIG_LINE_MAX];
     DWORD line_number = 0U;
     BOOL in_app = FALSE;
+    BOOL in_checks = FALSE;
+    MonitorCheck *current_check = NULL;
 
     if (path == NULL || config == NULL) {
         return SetError(error, 0U, L"Invalid configuration loader arguments.");
@@ -112,11 +174,60 @@ BOOL LoadMonitorConfig(LPCWSTR path, MonitorConfig *config, ConfigError *error)
 
         if (wcscmp(text, L"app:") == 0) {
             in_app = TRUE;
+            in_checks = FALSE;
             continue;
         }
 
         if (wcscmp(text, L"checks:") == 0) {
             in_app = FALSE;
+            in_checks = TRUE;
+            continue;
+        }
+
+        if (in_checks && text[0] == L'-') {
+            wchar_t *item_text = TrimLeft(text + 1);
+
+            if (config->check_count >= MRM_MAX_CHECKS) {
+                (void)fclose(file);
+                return SetError(error, line_number, L"Too many checks configured.");
+            }
+
+            current_check = &config->checks[config->check_count];
+            SecureZeroMemory(current_check, sizeof(*current_check));
+            current_check->line_number = line_number;
+            ++config->check_count;
+
+            if (item_text[0] == L'\0') {
+                continue;
+            }
+
+            if (!SplitKeyValue(item_text, &key, &value)) {
+                (void)fclose(file);
+                return SetError(error, line_number, L"Expected key: value after check list marker.");
+            }
+
+            if (!ParseCheckField(current_check, key, value, error, line_number)) {
+                (void)fclose(file);
+                return FALSE;
+            }
+            continue;
+        }
+
+        if (in_checks) {
+            if (current_check == NULL) {
+                (void)fclose(file);
+                return SetError(error, line_number, L"Check field appears before a check item.");
+            }
+
+            if (!SplitKeyValue(text, &key, &value)) {
+                (void)fclose(file);
+                return SetError(error, line_number, L"Expected key: value in checks section.");
+            }
+
+            if (!ParseCheckField(current_check, key, value, error, line_number)) {
+                (void)fclose(file);
+                return FALSE;
+            }
             continue;
         }
 

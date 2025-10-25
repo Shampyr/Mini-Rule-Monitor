@@ -14,7 +14,7 @@ checks:
 
   - name: "Shell process"
     type: "process"
-    name: "powershell.exe"
+    process_name: "powershell.exe"
 
   - name: "Memory"
     type: "system"
