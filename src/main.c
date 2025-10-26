@@ -87,7 +87,11 @@ int wmain(int argc, wchar_t **argv)
     SecureZeroMemory(&error, sizeof(error));
 
     if (!LoadMonitorConfig(config_path, &config, &error)) {
-        wprintf(L"Config error: %ls\n", error.message);
+        if (error.line_number > 0U) {
+            wprintf(L"Config error on line %lu: %ls\n", error.line_number, error.message);
+        } else {
+            wprintf(L"Config error: %ls\n", error.message);
+        }
         return 1;
     }
 

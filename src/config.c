@@ -127,6 +127,44 @@ static BOOL ParseCheckField(MonitorCheck *check,
     return TRUE;
 }
 
+static BOOL IsKnownCheckType(LPCWSTR type)
+{
+    return wcscmp(type, L"file_exists") == 0 ||
+           wcscmp(type, L"disk") == 0 ||
+           wcscmp(type, L"process") == 0 ||
+           wcscmp(type, L"system") == 0;
+}
+
+static BOOL ValidateCheck(const MonitorCheck *check, ConfigError *error)
+{
+    if (check == NULL) {
+        return SetError(error, 0U, L"Internal check validation error.");
+    }
+
+    if (IsEmptyString(check->name)) {
+        return SetError(error, check->line_number, L"Each check must have a name.");
+    }
+
+    if (IsEmptyString(check->type)) {
+        return SetError(error, check->line_number, L"Each check must have a type.");
+    }
+
+    if (!IsKnownCheckType(check->type)) {
+        return SetError(error, check->line_number, L"Unknown check type.");
+    }
+
+    if ((wcscmp(check->type, L"file_exists") == 0 || wcscmp(check->type, L"disk") == 0) &&
+        IsEmptyString(check->path)) {
+        return SetError(error, check->line_number, L"This check type requires path.");
+    }
+
+    if (wcscmp(check->type, L"process") == 0 && IsEmptyString(check->process_name)) {
+        return SetError(error, check->line_number, L"Process check requires process_name.");
+    }
+
+    return TRUE;
+}
+
 void MonitorConfigInit(MonitorConfig *config)
 {
     if (config == NULL) {
@@ -258,5 +296,16 @@ BOOL LoadMonitorConfig(LPCWSTR path, MonitorConfig *config, ConfigError *error)
     }
 
     (void)fclose(file);
+
+    if (config->check_count == 0U) {
+        return SetError(error, 0U, L"Configuration must contain at least one check.");
+    }
+
+    for (line_number = 0U; line_number < config->check_count; ++line_number) {
+        if (!ValidateCheck(&config->checks[line_number], error)) {
+            return FALSE;
+        }
+    }
+
     return TRUE;
 }
