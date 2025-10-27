@@ -115,6 +115,27 @@ int wmain(int argc, wchar_t **argv)
         return 0;
     }
 
+    if (command == MONITOR_COMMAND_CHECK_ONCE || command == MONITOR_COMMAND_RUN) {
+        DWORD index = 0U;
+
+        for (index = 0U; index < config.check_count; ++index) {
+            CheckResult result;
+            SecureZeroMemory(&result, sizeof(result));
+
+            if (!RunMonitorCheck(&config.checks[index], &result)) {
+                wprintf(L"[FAIL] %ls: internal check error\n", config.checks[index].name);
+                continue;
+            }
+
+            wprintf(L"[%ls] %ls: %ls\n",
+                    MonitorStatusText(result.status),
+                    result.name,
+                    result.message);
+        }
+
+        return 0;
+    }
+
     wprintf(L"Config: %ls\n", config_path);
     wprintf(L"This command will be implemented in the next slices.\n");
     return 0;
