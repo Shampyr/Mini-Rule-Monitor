@@ -49,6 +49,64 @@ static BOOL RunFileExistsCheck(const MonitorCheck *check, CheckResult *result)
     return SetResult(result, check, MONITOR_STATUS_OK, L"file exists");
 }
 
+static BOOL RunDiskCheck(const MonitorCheck *check, CheckResult *result)
+{
+    ULARGE_INTEGER available_bytes;
+    ULARGE_INTEGER total_bytes;
+    wchar_t message[MRM_MAX_MESSAGE];
+    double available_gb = 0.0;
+    BOOL ok = FALSE;
+
+    SecureZeroMemory(&available_bytes, sizeof(available_bytes));
+    SecureZeroMemory(&total_bytes, sizeof(total_bytes));
+    SecureZeroMemory(message, sizeof(message));
+
+    /*
+     * The last parameter is NULL because the monitor only reports total size
+     * and user-available free bytes; total free bytes ignoring quota is unused.
+     */
+    ok = GetDiskFreeSpaceExW(check->path, &available_bytes, &total_bytes, NULL);
+    if (!ok) {
+        DWORD error_code = GetLastError();
+        HRESULT hr = StringCchPrintfW(message,
+                                      MRM_MAX_MESSAGE,
+                                      L"could not read disk space, error=%lu",
+                                      error_code);
+        if (FAILED(hr)) {
+            return FALSE;
+        }
+        return SetResult(result, check, MONITOR_STATUS_FAIL, message);
+    }
+
+    available_gb = (double)available_bytes.QuadPart / (1024.0 * 1024.0 * 1024.0);
+
+    if (available_gb < check->min_free_gb) {
+        HRESULT hr = StringCchPrintfW(message,
+                                      MRM_MAX_MESSAGE,
+                                      L"free_gb=%.2f required_gb=%.2f",
+                                      available_gb,
+                                      check->min_free_gb);
+        if (FAILED(hr)) {
+            return FALSE;
+        }
+        return SetResult(result, check, MONITOR_STATUS_WARN, message);
+    }
+
+    {
+        double total_gb = (double)total_bytes.QuadPart / (1024.0 * 1024.0 * 1024.0);
+        HRESULT hr = StringCchPrintfW(message,
+                                      MRM_MAX_MESSAGE,
+                                      L"free_gb=%.2f total_gb=%.2f",
+                                      available_gb,
+                                      total_gb);
+        if (FAILED(hr)) {
+            return FALSE;
+        }
+    }
+
+    return SetResult(result, check, MONITOR_STATUS_OK, message);
+}
+
 BOOL RunMonitorCheck(const MonitorCheck *check, CheckResult *result)
 {
     if (check == NULL || result == NULL) {
@@ -57,6 +115,10 @@ BOOL RunMonitorCheck(const MonitorCheck *check, CheckResult *result)
 
     if (wcscmp(check->type, L"file_exists") == 0) {
         return RunFileExistsCheck(check, result);
+    }
+
+    if (wcscmp(check->type, L"disk") == 0) {
+        return RunDiskCheck(check, result);
     }
 
     return SetResult(result, check, MONITOR_STATUS_SKIP, L"check type is not implemented yet");
