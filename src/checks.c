@@ -1,5 +1,7 @@
 #include "monitor.h"
 
+#include <tlhelp32.h>
+
 static BOOL SetResult(CheckResult *result,
                       const MonitorCheck *check,
                       MonitorStatus status,
@@ -107,6 +109,98 @@ static BOOL RunDiskCheck(const MonitorCheck *check, CheckResult *result)
     return SetResult(result, check, MONITOR_STATUS_OK, message);
 }
 
+static BOOL SameProcessName(LPCWSTR left, LPCWSTR right)
+{
+    int comparison = CompareStringOrdinal(left, -1, right, -1, TRUE);
+    return comparison == CSTR_EQUAL;
+}
+
+static BOOL RunProcessCheck(const MonitorCheck *check, CheckResult *result)
+{
+    HANDLE snapshot = INVALID_HANDLE_VALUE;
+    PROCESSENTRY32W entry;
+    DWORD count = 0U;
+    wchar_t message[MRM_MAX_MESSAGE];
+    BOOL has_entry = FALSE;
+    BOOL success = FALSE;
+
+    SecureZeroMemory(&entry, sizeof(entry));
+    SecureZeroMemory(message, sizeof(message));
+    entry.dwSize = sizeof(entry);
+
+    /*
+     * The second parameter is zero because TH32CS_SNAPPROCESS ignores the
+     * process id and captures all processes visible to the current user.
+     */
+    snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0U);
+    if (snapshot == INVALID_HANDLE_VALUE) {
+        DWORD error_code = GetLastError();
+        HRESULT hr = StringCchPrintfW(message,
+                                      MRM_MAX_MESSAGE,
+                                      L"could not create process snapshot, error=%lu",
+                                      error_code);
+        if (FAILED(hr)) {
+            return FALSE;
+        }
+        return SetResult(result, check, MONITOR_STATUS_FAIL, message);
+    }
+
+    has_entry = Process32FirstW(snapshot, &entry);
+    if (!has_entry) {
+        DWORD error_code = GetLastError();
+        (void)CloseHandle(snapshot);
+        if (error_code != ERROR_NO_MORE_FILES) {
+            HRESULT hr = StringCchPrintfW(message,
+                                          MRM_MAX_MESSAGE,
+                                          L"could not read process snapshot, error=%lu",
+                                          error_code);
+            if (FAILED(hr)) {
+                return FALSE;
+            }
+            return SetResult(result, check, MONITOR_STATUS_FAIL, message);
+        }
+    }
+
+    while (has_entry) {
+        if (SameProcessName(entry.szExeFile, check->process_name)) {
+            ++count;
+        }
+
+        SecureZeroMemory(&entry, sizeof(entry));
+        entry.dwSize = sizeof(entry);
+        has_entry = Process32NextW(snapshot, &entry);
+    }
+
+    success = CloseHandle(snapshot);
+    if (!success) {
+        DWORD error_code = GetLastError();
+        HRESULT hr = StringCchPrintfW(message,
+                                      MRM_MAX_MESSAGE,
+                                      L"could not close process snapshot, error=%lu",
+                                      error_code);
+        if (FAILED(hr)) {
+            return FALSE;
+        }
+        return SetResult(result, check, MONITOR_STATUS_FAIL, message);
+    }
+
+    if (count == 0U) {
+        return SetResult(result, check, MONITOR_STATUS_FAIL, L"process is not running");
+    }
+
+    {
+        HRESULT hr = StringCchPrintfW(message,
+                                      MRM_MAX_MESSAGE,
+                                      L"process_count=%lu",
+                                      count);
+        if (FAILED(hr)) {
+            return FALSE;
+        }
+    }
+
+    return SetResult(result, check, MONITOR_STATUS_OK, message);
+}
+
 BOOL RunMonitorCheck(const MonitorCheck *check, CheckResult *result)
 {
     if (check == NULL || result == NULL) {
@@ -119,6 +213,10 @@ BOOL RunMonitorCheck(const MonitorCheck *check, CheckResult *result)
 
     if (wcscmp(check->type, L"disk") == 0) {
         return RunDiskCheck(check, result);
+    }
+
+    if (wcscmp(check->type, L"process") == 0) {
+        return RunProcessCheck(check, result);
     }
 
     return SetResult(result, check, MONITOR_STATUS_SKIP, L"check type is not implemented yet");
