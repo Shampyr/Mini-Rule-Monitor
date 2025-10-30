@@ -201,6 +201,46 @@ static BOOL RunProcessCheck(const MonitorCheck *check, CheckResult *result)
     return SetResult(result, check, MONITOR_STATUS_OK, message);
 }
 
+static BOOL RunSystemCheck(const MonitorCheck *check, CheckResult *result)
+{
+    MEMORYSTATUSEX memory_status;
+    wchar_t message[MRM_MAX_MESSAGE];
+    BOOL ok = FALSE;
+
+    SecureZeroMemory(&memory_status, sizeof(memory_status));
+    SecureZeroMemory(message, sizeof(message));
+    memory_status.dwLength = sizeof(memory_status);
+
+    ok = GlobalMemoryStatusEx(&memory_status);
+    if (!ok) {
+        DWORD error_code = GetLastError();
+        HRESULT hr = StringCchPrintfW(message,
+                                      MRM_MAX_MESSAGE,
+                                      L"could not read memory status, error=%lu",
+                                      error_code);
+        if (FAILED(hr)) {
+            return FALSE;
+        }
+        return SetResult(result, check, MONITOR_STATUS_FAIL, message);
+    }
+
+    {
+        double total_gb = (double)memory_status.ullTotalPhys / (1024.0 * 1024.0 * 1024.0);
+        double available_gb = (double)memory_status.ullAvailPhys / (1024.0 * 1024.0 * 1024.0);
+        HRESULT hr = StringCchPrintfW(message,
+                                      MRM_MAX_MESSAGE,
+                                      L"memory_load=%lu%% available_gb=%.2f total_gb=%.2f",
+                                      memory_status.dwMemoryLoad,
+                                      available_gb,
+                                      total_gb);
+        if (FAILED(hr)) {
+            return FALSE;
+        }
+    }
+
+    return SetResult(result, check, MONITOR_STATUS_OK, message);
+}
+
 BOOL RunMonitorCheck(const MonitorCheck *check, CheckResult *result)
 {
     if (check == NULL || result == NULL) {
@@ -217,6 +257,10 @@ BOOL RunMonitorCheck(const MonitorCheck *check, CheckResult *result)
 
     if (wcscmp(check->type, L"process") == 0) {
         return RunProcessCheck(check, result);
+    }
+
+    if (wcscmp(check->type, L"system") == 0) {
+        return RunSystemCheck(check, result);
     }
 
     return SetResult(result, check, MONITOR_STATUS_SKIP, L"check type is not implemented yet");
