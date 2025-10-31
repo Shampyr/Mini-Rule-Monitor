@@ -127,10 +127,7 @@ int wmain(int argc, wchar_t **argv)
                 continue;
             }
 
-            wprintf(L"[%ls] %ls: %ls\n",
-                    MonitorStatusText(result.status),
-                    result.name,
-                    result.message);
+            PrintCheckResult(&result);
         }
 
         return 0;
