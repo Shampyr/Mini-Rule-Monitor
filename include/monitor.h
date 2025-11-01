@@ -68,5 +68,6 @@ void MonitorConfigInit(MonitorConfig *config);
 BOOL LoadMonitorConfig(LPCWSTR path, MonitorConfig *config, ConfigError *error);
 BOOL RunMonitorCheck(const MonitorCheck *check, CheckResult *result);
 void PrintCheckResult(const CheckResult *result);
+BOOL AppendCheckResultToLog(LPCWSTR log_file, const CheckResult *result);
 
 #endif

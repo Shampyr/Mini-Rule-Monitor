@@ -128,6 +128,9 @@ int wmain(int argc, wchar_t **argv)
             }
 
             PrintCheckResult(&result);
+            if (!AppendCheckResultToLog(config.log_file, &result)) {
+                wprintf(L"[WARN] could not append to log file: %ls\n", config.log_file);
+            }
         }
 
         return 0;
