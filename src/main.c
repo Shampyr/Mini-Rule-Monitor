@@ -64,6 +64,30 @@ static BOOL ParseCommand(int argc,
     return TRUE;
 }
 
+static void RunAllChecks(const MonitorConfig *config)
+{
+    DWORD index = 0U;
+
+    if (config == NULL) {
+        return;
+    }
+
+    for (index = 0U; index < config->check_count; ++index) {
+        CheckResult result;
+        SecureZeroMemory(&result, sizeof(result));
+
+        if (!RunMonitorCheck(&config->checks[index], &result)) {
+            wprintf(L"[FAIL] %ls: internal check error\n", config->checks[index].name);
+            continue;
+        }
+
+        PrintCheckResult(&result);
+        if (!AppendCheckResultToLog(config->log_file, &result)) {
+            wprintf(L"[WARN] could not append to log file: %ls\n", config->log_file);
+        }
+    }
+}
+
 int wmain(int argc, wchar_t **argv)
 {
     MonitorCommand command = MONITOR_COMMAND_HELP;
@@ -115,28 +139,20 @@ int wmain(int argc, wchar_t **argv)
         return 0;
     }
 
-    if (command == MONITOR_COMMAND_CHECK_ONCE || command == MONITOR_COMMAND_RUN) {
-        DWORD index = 0U;
-
-        for (index = 0U; index < config.check_count; ++index) {
-            CheckResult result;
-            SecureZeroMemory(&result, sizeof(result));
-
-            if (!RunMonitorCheck(&config.checks[index], &result)) {
-                wprintf(L"[FAIL] %ls: internal check error\n", config.checks[index].name);
-                continue;
-            }
-
-            PrintCheckResult(&result);
-            if (!AppendCheckResultToLog(config.log_file, &result)) {
-                wprintf(L"[WARN] could not append to log file: %ls\n", config.log_file);
-            }
-        }
-
+    if (command == MONITOR_COMMAND_CHECK_ONCE) {
+        RunAllChecks(&config);
         return 0;
     }
 
-    wprintf(L"Config: %ls\n", config_path);
-    wprintf(L"This command will be implemented in the next slices.\n");
-    return 0;
+    if (command == MONITOR_COMMAND_RUN) {
+        DWORD delay_ms = config.interval_seconds * 1000U;
+
+        wprintf(L"Running checks every %lu seconds. Press Ctrl+C to stop.\n", config.interval_seconds);
+        for (;;) {
+            RunAllChecks(&config);
+            Sleep(delay_ms);
+        }
+    }
+
+    return 2;
 }
