@@ -171,6 +171,21 @@ static BOOL RunProcessCheck(const MonitorCheck *check, CheckResult *result)
         has_entry = Process32NextW(snapshot, &entry);
     }
 
+    {
+        DWORD iteration_error = GetLastError();
+        if (iteration_error != ERROR_NO_MORE_FILES) {
+            HRESULT hr = StringCchPrintfW(message,
+                                          MRM_MAX_MESSAGE,
+                                          L"could not continue process snapshot, error=%lu",
+                                          iteration_error);
+            (void)CloseHandle(snapshot);
+            if (FAILED(hr)) {
+                return FALSE;
+            }
+            return SetResult(result, check, MONITOR_STATUS_FAIL, message);
+        }
+    }
+
     success = CloseHandle(snapshot);
     if (!success) {
         DWORD error_code = GetLastError();

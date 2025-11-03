@@ -38,15 +38,13 @@ static void StripQuotes(wchar_t *text)
 
 static BOOL SetError(ConfigError *error, DWORD line_number, LPCWSTR message)
 {
-    HRESULT hr = S_OK;
-
     if (error == NULL) {
         return FALSE;
     }
 
     error->line_number = line_number;
-    hr = StringCchCopyW(error->message, MRM_MAX_MESSAGE, message);
-    return SUCCEEDED(hr) ? FALSE : FALSE;
+    (void)StringCchCopyW(error->message, MRM_MAX_MESSAGE, message);
+    return FALSE;
 }
 
 static BOOL SplitKeyValue(wchar_t *line, wchar_t **key, wchar_t **value)

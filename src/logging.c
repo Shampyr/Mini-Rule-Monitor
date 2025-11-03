@@ -45,6 +45,8 @@ BOOL AppendCheckResultToLog(LPCWSTR log_file, const CheckResult *result)
     FILE *file = NULL;
     errno_t open_result = 0;
     SYSTEMTIME now;
+    int write_result = 0;
+    int close_result = 0;
 
     if (log_file == NULL || result == NULL) {
         return FALSE;
@@ -62,17 +64,18 @@ BOOL AppendCheckResultToLog(LPCWSTR log_file, const CheckResult *result)
         return FALSE;
     }
 
-    fwprintf(file,
-             L"%04hu-%02hu-%02hu %02hu:%02hu:%02hu %ls %ls %ls\n",
-             now.wYear,
-             now.wMonth,
-             now.wDay,
-             now.wHour,
-             now.wMinute,
-             now.wSecond,
-             MonitorStatusText(result->status),
-             result->name,
-             result->message);
+    write_result = fwprintf(file,
+                            L"%04hu-%02hu-%02hu %02hu:%02hu:%02hu %ls %ls %ls\n",
+                            now.wYear,
+                            now.wMonth,
+                            now.wDay,
+                            now.wHour,
+                            now.wMinute,
+                            now.wSecond,
+                            MonitorStatusText(result->status),
+                            result->name,
+                            result->message);
 
-    return fclose(file) == 0;
+    close_result = fclose(file);
+    return write_result >= 0 && close_result == 0;
 }

@@ -11,6 +11,9 @@ if (-not $gccCommand) {
     throw "GCC was not found. Install MinGW or add gcc.exe to PATH."
 }
 
+$gccBin = Split-Path -Parent $gccCommand.Source
+$env:PATH = "$gccBin;$env:PATH"
+
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $buildDir = Join-Path $root "build"
 $tempDir = Join-Path $buildDir "tmp"
