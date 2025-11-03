@@ -16,6 +16,7 @@ HTTP monitoring is planned for a later version.
 ## Commands
 
 ```powershell
+.\build.ps1
 .\build\mini-rule-monitor.exe validate-config --config config.yaml
 .\build\mini-rule-monitor.exe list-checks --config config.yaml
 .\build\mini-rule-monitor.exe check-once --config config.yaml
@@ -37,3 +38,35 @@ The parser supports a deliberately small YAML subset:
   `min_free_gb`
 
 The supported check types are `file_exists`, `disk`, `process`, and `system`.
+
+## Build
+
+The build script prefers MinGW GCC at:
+
+```text
+D:\Program Files\Mingw64\bin\gcc.exe
+```
+
+It compiles with C11, Unicode macros, `wmain` support, and strict warnings:
+
+```text
+-std=c11 -Wall -Wextra -Wpedantic -DUNICODE -D_UNICODE -municode
+```
+
+If PowerShell blocks local scripts, run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+```
+
+## Troubleshooting
+
+- `Could not open configuration file`: check the `--config` path.
+- `Unknown check type`: use `file_exists`, `disk`, `process`, or `system`.
+- `Process check requires process_name`: process checks use `process_name`.
+- `could not append to log file`: check permissions for the log directory.
+
+## Notes
+
+This project intentionally implements a small YAML-style parser for the sample
+configuration format. It is not a complete YAML implementation.
