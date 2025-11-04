@@ -28,6 +28,22 @@ running checks. `list-checks` prints configured check names and types.
 `check-once` executes each check once. `run` repeats `check-once` with the
 configured interval.
 
+The same native tool can be launched through the Python wrapper:
+
+```powershell
+python monitor.py build
+python monitor.py validate-config
+python monitor.py list-checks
+python monitor.py check-once
+python monitor.py run
+```
+
+Use `--build` to rebuild before executing a command:
+
+```powershell
+python monitor.py --build check-once
+```
+
 ## Configuration Format
 
 The parser supports a deliberately small YAML subset:
