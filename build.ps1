@@ -1,11 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$preferredGcc = "D:\Program Files\Mingw64\bin\gcc.exe"
-$gccCommand = Get-Command $preferredGcc -ErrorAction SilentlyContinue
-
-if (-not $gccCommand) {
-    $gccCommand = Get-Command "gcc.exe" -ErrorAction SilentlyContinue
-}
+$gccCommand = Get-Command "gcc.exe" -ErrorAction SilentlyContinue
 
 if (-not $gccCommand) {
     throw "GCC was not found. Install MinGW or add gcc.exe to PATH."

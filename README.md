@@ -57,10 +57,11 @@ The supported check types are `file_exists`, `disk`, `process`, and `system`.
 
 ## Build
 
-The build script prefers MinGW GCC at:
+The build script expects MinGW GCC to be available as `gcc.exe` in `PATH`.
+Check it before building:
 
-```text
-D:\Program Files\Mingw64\bin\gcc.exe
+```powershell
+gcc --version
 ```
 
 It compiles with C11, Unicode macros, `wmain` support, and strict warnings:
